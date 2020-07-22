@@ -48,7 +48,7 @@ You can run our test dataset with:
 
 ## 3. Citing this work
 
-The paper has not been published yet, the reference link will be given later.
+The paper is accepted by IROS2020, the reference link will be given later.
 
 ## 4. Lisence
 
