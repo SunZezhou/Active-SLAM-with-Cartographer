@@ -1,4 +1,4 @@
-# Active Exploration with Lazy and Reachable Frontier Detection
+# Active SLAM with Cartograher
 
 This work contains a modified version of [cartographer_frontier_detection](https://github.com/larics/cartographer_frontier_detection) and [rrt_exploration](https://github.com/hasauino/rrt_exploration). We implement an active exploration process and improve its robustness and performance. More details are described in the paper "Frontier Detection and Reachability Analysis for Efficient 2D Graph-SLAM Based Active Exploration" (IROS2020).
 
