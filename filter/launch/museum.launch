@@ -1,0 +1,10 @@
+<launch>
+    <node name="filter" pkg="filter" type="filter_node" output="log">
+        <param name="map" value="/map" />
+        <param name="frontier" value="/frontier_marker" />
+        <param name="aim" value="/filtered_points" />
+        <param name="radius" value="2" />
+        <param name="wall_threshold" value="100" />
+        <param name="base_frame" value="base_link" />
+    </node>
+</launch>

@@ -1,0 +1,8 @@
+<launch>
+    <node name="map_after_process" pkg="map_after_process" type="map_after_process_node" output="screen">
+        <param name="map_sub_topic" value="/map_before_process" />
+        <param name="map_pub_topic" value="/map" />
+        <param name="radius" value="3"/>
+    </node>
+
+</launch>

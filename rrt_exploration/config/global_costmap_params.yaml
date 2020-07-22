@@ -1,0 +1,19 @@
+global_costmap:
+   global_frame: map
+   robot_base_frame: base_footprint
+   update_frequency: 1.5
+   publish_frequency: 1.0
+   static_map: true
+   rolling_window: false
+   resolution: 0.05
+   transform_tolerance: 1.0
+   map_type: costmap
+
+   plugins:
+   - {name: static_layer,        type: "costmap_2d::StaticLayer"}
+   - {name: obstacle_layer,      type: "costmap_2d::VoxelLayer"}
+#   - {name: virtualWall_layer,   type: "costmap_2d::VirtualWallLayer"}
+   - {name: inflation_layer,     type: "costmap_2d::InflationLayer"}
+
+GlobalPlanner:        
+   allow_unknown: false 
