@@ -6,49 +6,29 @@ This work contains a modified version of [cartographer_frontier_detection](https
 
 ## 1. Requirements
 
-The package has been tested on Ubuntu18.04 with ROS Melodic, it should work on Ubuntu16.04 with ROS Kinetic. The following requirements are needed before installing the package:
+The package has been tested on Ubuntu16.04 with ROS Kinetic. It is known that apt-get install kuboki will cause errors in ROS Melodic. 
 
-(1) You should have installed a ROS distribution.
-
-(2) Created a workspace.
-
-(3) Installed the "Frontier detection for Google Cartographer" package. You can follow the intructions for compiling [Frontier detection for Google Cartographer](https://github.com/larics/cartographer_frontier_detection). However, instead of cloning the official version of cartographer_ros, clone this repository into your catkin workspace instead.
-
-(4) Install ROS navigation stack. You can do that with the following command (assuming Ubuntu, ROS Melodic):
-
-`$ sudo apt-get install ros-melodic-navigation`
-
-(5) You should have Python 2.7 (it was not tested on Python 3) and have/install the following python modules:
-
-Numpy
-
-`$ sudo apt-get install python-numpy`
+I provide a detailed docker installation procedure in [my-docke-env](https://github.com/SunZezhou/My-docker-env).
 
 ## 2. Usage
 
-### 2.1 Public dataset
+I have provided several available launch files:
 
-We have tested on [Deutsches Museum Dataset](https://google-cartographer-ros.readthedocs.io/en/latest/data.html). 
+`roslaunch cartographer_ros playbag.launch`  (Note that the default lidar topic is ‘/scan’)
 
-The data used in the paper is [here](https://storage.googleapis.com/cartographer-public-data/bags/backpack_2d/cartographer_paper_deutsches_museum.bag).
+`roslaunch cartographer_ros carto_gazebo.launch`  (The robot explores in the simulation environment。 TODO: adjust the move_base parameters)
 
-Remember to turn off `#define E2_ROBOT` in the file: cartographer_ros/cartographer_ros/cartographer_ros/sensor_bridge.cc
+`roslaunch cartographer_ros carto_movebase.launch`  (Standard SLAM with navigation)
 
-Run the launch file with:
+`roslaunch cartographer_ros simple_move.launch`  (Send a virtual void map, only call move_base)
 
-`roslaunch rrt_exploration carto_offline_museum.launch bag_filename:=${PATH}/cartographer_paper_deutsches_museum.bag`
+`roslaunch cartographer_ros turtlebot_hokuyo.launch` (The robot explores in the real environment。 TODO: adjust the move_base parameters)
 
-### 2.2 Our dataset
+## 3. Updates
 
-Remember to turn on `#define E2_ROBOT` in the file: cartographer_ros/cartographer_ros/cartographer_ros/sensor_bridge.cc
+master: Migrate code to turtlebot2.  (2020.08.15)
 
-You can run our test dataset with:
-
-`roslaunch rrt_exploration carto_offline_office.launch bag_filename:=${PATH}/horizon.bag`
-
-## 3. Citing this work
-
-The paper is accepted by IROS2020, the reference link will be given later.
+branch: Paper Version == tags v1.0   
 
 ## 4. Lisence
 
