@@ -1,8 +1,9 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(map_after_process)
+cmake_minimum_required(VERSION 3.0.2)
+project(turtle_test)
 
-# Compile as C++11, supported in ROS Kinetic and newer
+## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
+set(CMAKE_BUILD_TYPE "Release")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -10,12 +11,15 @@ add_compile_options(-std=c++11)
 find_package(catkin REQUIRED COMPONENTS
   nav_msgs
   roscpp
-  std_msgs
+  rospy
+  sensor_msgs
+  tf
+  tf2
+  geometry_msgs
 )
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
-find_package(OpenCV REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -71,7 +75,7 @@ find_package(OpenCV REQUIRED)
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   nav_msgs#   std_msgs
+#   nav_msgs#   sensor_msgs
 # )
 
 ################################################
@@ -105,8 +109,8 @@ find_package(OpenCV REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES map_after_process
-#  CATKIN_DEPENDS nav_msgs roscpp std_msgs
+#  LIBRARIES turtle_test
+#  CATKIN_DEPENDS nav_msgs roscpp rospy sensor_msgs tf tf2
 #  DEPENDS system_lib
 )
 
@@ -119,12 +123,12 @@ catkin_package(
 include_directories(
 # include
   ${catkin_INCLUDE_DIRS}
-  ${OpenCV_INCLUDE_DIRS}
+  "/usr/include/eigen3/"
 )
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/map_after_process.cpp
+#   src/${PROJECT_NAME}/turtle_test.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -132,10 +136,10 @@ include_directories(
 ## either from message generation or dynamic reconfigure
 # add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-# Declare a C++ executable
-# With catkin_make all packages are built within a single CMake context
-# The recommended prefix ensures that target names across packages don't collide
-add_executable(${PROJECT_NAME}_node src/map_after_process_node.cpp)
+## Declare a C++ executable
+## With catkin_make all packages are built within a single CMake context
+## The recommended prefix ensures that target names across packages don't collide
+add_executable(turtle_node src/turtle_node.cc)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -147,10 +151,9 @@ add_executable(${PROJECT_NAME}_node src/map_after_process_node.cpp)
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-# Specify libraries to link a library or executable target against
-target_link_libraries(${PROJECT_NAME}_node
+## Specify libraries to link a library or executable target against
+target_link_libraries(turtle_node
   ${catkin_LIBRARIES}
-  ${OpenCV_LIBS}
 )
 
 #############
@@ -162,7 +165,7 @@ target_link_libraries(${PROJECT_NAME}_node
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
+# catkin_install_python(PROGRAMS
 #   scripts/my_python_script
 #   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
@@ -200,7 +203,7 @@ target_link_libraries(${PROJECT_NAME}_node
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_map_after_process.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_turtle_test.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()

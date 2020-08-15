@@ -1,0 +1,49 @@
+<launch>
+
+  <!--Kobuki -->
+  <arg name="kobuki_publish_tf" default="true"/> 
+  <arg name="urdf_file" default="$(find xacro)/xacro '$(find kobuki_description)/urdf/kobuki_standalone.urdf.xacro'"/>
+  <param name="robot_description" command="$(arg urdf_file)"/>
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" >
+    </node>
+
+  <node pkg="nodelet" type="nodelet" name="mobile_base_nodelet_manager" args="manager"/>
+  <node pkg="nodelet" type="nodelet" name="mobile_base" args="load kobuki_node/KobukiNodelet mobile_base_nodelet_manager">
+    <rosparam file="$(find kobuki_node)/param/base.yaml" command="load"/>
+    <param name="publish_tf" value="$(arg kobuki_publish_tf)"/>
+    <remap from="mobile_base/odom" to="odom"/>
+    <remap from="mobile_base/joint_states" to="joint_states"/>
+  </node>
+
+  <node pkg="diagnostic_aggregator" type="aggregator_node" name="diagnostic_aggregator" >
+    <rosparam command="load" file="$(find kobuki_node)/param/diagnostics.yaml" />
+  </node>
+
+  
+  <node pkg="turtle_test" type="turtle_node" name="turtle_node" output="screen" />
+
+	  <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen">
+    <param name="footprint_padding" value="0.01" />
+    <param name="controller_frequency" value="5.0" />
+    <param name="controller_patience" value="3.0" />
+    <param name="oscillation_timeout" value="30.0" />
+    <param name="oscillation_distance" value="0.5" />
+    <param name="planner_patience" value="1" />
+    <param name="controller_patience" value="1" />
+    <remap from="cmd_vel" to="mobile_base/commands/velocity"/>
+    <param name="recovery_behavior_enabled" value="false" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/base_global_planner_param.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/base_local_planner_params.yaml" command="load" />
+    <param name="global_costmap/global_frame" value="/map"/>
+    <param name="global_costmap/robot_base_frame" value="/base_link"/>
+    <param name="local_costmap/global_frame" value="/map"/>
+    <param name="local_costmap/robot_base_frame" value="/base_link"/>
+    </node>
+
+</launch>
+
+

@@ -1,0 +1,7 @@
+<launch>
+    <node pkg="turtle_test" type="turtle_node" name="turtle_node" output="screen">
+        <remap from="/my_topic_1" to="/pose_robot"/>
+        <remap from="/my_topic_2" to="/goal_robot"/>
+    </node>
+    <param name="lalala" value="demaxia"/>
+</launch>

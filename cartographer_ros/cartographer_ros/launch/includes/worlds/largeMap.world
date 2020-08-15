@@ -1,0 +1,33 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+   
+   
+    <model name="floor">
+       <pose>0 0 -0.110060  0 0 0</pose>
+      <static>false</static>
+      <link name="floorPlan">
+        <visual name="visual">
+          <geometry>
+            <mesh><uri>file://largeMap.dae</uri></mesh>
+          </geometry>
+        </visual>
+      
+      
+        <collision name="collision">
+          <geometry>
+            <mesh><uri>file://largeMap.dae</uri></mesh>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+ 
+ 
+  </world>
+</sdf>

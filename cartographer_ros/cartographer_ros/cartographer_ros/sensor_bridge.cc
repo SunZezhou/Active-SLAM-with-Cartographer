@@ -20,8 +20,6 @@
 #include "cartographer_ros/msg_conversion.h"
 #include "cartographer_ros/time_conversion.h"
 
-# define E2_ROBOT
-
 namespace cartographer_ros {
 
 namespace carto = ::cartographer;
@@ -150,13 +148,8 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
   if (imu_data != nullptr) {
     const Eigen::Vector3d& origin_acc = imu_data ->linear_acceleration;
     const Eigen::Vector3d& origin_gyr = imu_data->angular_velocity;
-#ifdef E2_ROBOT
-    Eigen::Vector3d acc = {-origin_acc(0), origin_acc(1), -origin_acc(2)};
-    Eigen::Vector3d gyr = {-origin_gyr(0), origin_gyr(1), -origin_gyr(2)};
-#else
-    Eigen::Vector3d acc = origin_acc;
-    Eigen::Vector3d gyr = origin_gyr;
-#endif
+    Eigen::Vector3d acc = /*origin_acc*/{-origin_acc(0), origin_acc(1), -origin_acc(2)};
+    Eigen::Vector3d gyr = /*origin_gyr*/{-origin_gyr(0), origin_gyr(1), -origin_gyr(2)};
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::ImuData{imu_data->time, acc, gyr});

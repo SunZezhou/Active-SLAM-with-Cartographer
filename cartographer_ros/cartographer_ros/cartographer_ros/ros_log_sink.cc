@@ -48,7 +48,7 @@ void ScopedRosLogSink::send(const ::google::LogSeverity severity,
       severity, GetBasename(filename), line, tm_time, message, message_len);
   switch (severity) {
     case ::google::GLOG_INFO:
-      ROS_DEBUG_STREAM(message_string);
+      ROS_INFO_STREAM(message_string);
       break;
 
     case ::google::GLOG_WARNING:

@@ -14,7 +14,9 @@
 #include "process.h"
 
 int wall_threshold = 100;
+// cv::Mat StructElem;
 
+// std::mutex mapMutex;
 Map globalMap;
 
 std::mutex frontierMutex;
@@ -63,10 +65,10 @@ void frontierCallback(const visualization_msgs::MarkerArrayConstPtr &msg)
 int main(int argc, char *argv[])
 {
     ros::init(argc, argv, "filter");
-    ros::NodeHandle n("~");
+    ros::NodeHandle n;
     int tolerant_radius = 3;
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
-    std::string mapTopic = "/map", submapTopic = "/submap_list", frontierTopic = "/frontier_marker", aimTopic = "/aim", centroidsTopic = "/centroids", base_frame = "base_footprint";
+    std::string mapTopic = "map", submapTopic = "submap_list", frontierTopic = "frontier_marker", aimTopic = "filtered_points", centroidsTopic = "centroids", base_frame = "base_footprint";
     n.param("map", mapTopic, mapTopic);
     n.param("frontier", frontierTopic, frontierTopic);
     n.param("aim", aimTopic, aimTopic);
@@ -74,17 +76,19 @@ int main(int argc, char *argv[])
     n.param("radius", tolerant_radius, tolerant_radius);
     n.param("wall_threshold", wall_threshold, wall_threshold);
     n.param("base_frame", base_frame, base_frame);
+    // StructElem = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2 * tolerant_radius + 1, 2 * tolerant_radius + 1), cv::Point(tolerant_radius, tolerant_radius));
     ros::Subscriber mapSub = n.subscribe(mapTopic, 1, mapCallback);
     ros::Subscriber frontierSub = n.subscribe(frontierTopic, 1, frontierCallback);
     ros::Publisher aimPub = n.advertise<rrt_exploration::PointArray>(aimTopic, 1);
     ros::Publisher centroidsPub = n.advertise<visualization_msgs::MarkerArray>(centroidsTopic, 1);
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
-    ROS_WARN_STREAM(base_frame);
 #if 1
     std::thread thread([&]() {
         ros::Rate rate(10);
         FrontierArrayMap globalFrontiers;
+        // ros::Time total = ros::Time(0);
+        // int count = 0;
         while (!ros::isShuttingDown())
         {
             std::map<SubmapId, std::vector<geometry_msgs::Point>> result;
@@ -96,7 +100,13 @@ int main(int argc, char *argv[])
                 }
                 if (currentUpdateFrontiers.size() == 0)
                     continue;
+                // ros::Time t = ros::Time::now();
                 FrontierArrayMap newFrontiers = process(currentUpdateFrontiers, globalMap, tfBuffer, base_frame);
+                // uint64_t dt0, dt1;
+                // std::tie(newFrontiers, dt0, dt1) = process(currentUpdateFrontiers, globalMap, tfBuffer, base_frame);
+                // total += ros::Time::now() - t;
+                // ROS_WARN_STREAM(count << "," << dt0 << "," << dt1);
+                // count++;
                 for (auto &it : newFrontiers)
                 {
                     result[it.first] = {};
@@ -126,9 +136,9 @@ int main(int argc, char *argv[])
                     // m.scale.x = 0.05;
                     // m.scale.y = 0.05;
                     m.scale.z = 1;
-                    m.color.r = 0;
+                    m.color.r = 1;
                     m.color.g = 0;
-                    m.color.b = 1;
+                    m.color.b = 0;
                     m.color.a = 1;
                     m.points = r.second;
                     mArr.markers.push_back(m);

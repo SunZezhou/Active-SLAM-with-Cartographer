@@ -1,0 +1,126 @@
+<launch>
+
+  <!--Kobuki -->
+  <arg name="kobuki_publish_tf" default="true"/> 
+  <arg name="urdf_file" default="$(find xacro)/xacro '$(find kobuki_description)/urdf/kobuki_standalone.urdf.xacro'"/>
+  <param name="robot_description" command="$(arg urdf_file)"/>
+  <node pkg="robot_state_publisher" type="robot_state_publisher" name="rob_st_pub" >
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="mobile_base_nodelet_manager" args="manager"/>
+  <node pkg="nodelet" type="nodelet" name="mobile_base" args="load kobuki_node/KobukiNodelet mobile_base_nodelet_manager">
+    <rosparam file="$(find kobuki_node)/param/base.yaml" command="load"/>
+    <param name="publish_tf" value="$(arg kobuki_publish_tf)"/>
+    <remap from="mobile_base/odom" to="odom"/>
+    <remap from="mobile_base/joint_states" to="joint_states"/>
+  </node>
+
+  <node pkg="diagnostic_aggregator" type="aggregator_node" name="diagnostic_aggregator" >
+    <rosparam command="load" file="$(find kobuki_node)/param/diagnostics.yaml" />
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="bumper2pointcloud" args="load kobuki_bumper2pc/Bumper2PcNodelet mobile_base_nodelet_manager">
+    <param name="pointcloud_radius" value="0.25"/>
+    <remap from="bumper2pointcloud/pointcloud" to = "mobile_base/sensors/bumper_pointcloud" />
+    <remap from="bumper2pointcloud/core_sensors" to = "mobile_base/sensors/core" />
+  </node>
+
+
+  <!-- Hokuyo -->
+  <node name="urg_node" pkg="urg_node" type="urg_node" output="screen">
+    <param name="ip_address" value="192.168.0.10"/>
+    <param name="serial_port" value="/dev/ttyACM0"/>
+    <param name="serial_baud" value="115200"/>
+    <param name="frame_id" value="laser"/>
+    <param name="calibrate_time" value="true"/>
+    <param name="publish_intensity" value="false"/>
+    <param name="publish_multiecho" value="false"/>
+    <param name="angle_min" value="-2"/>
+    <param name="angle_max" value="2"/>
+    <param name="range_min" value="0.1"/>
+    <param name="range_max" value="20"/>
+  </node>
+
+  <!--Cartogrtapher frontier detection -->
+    <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename turtlebot_hokuyo.lua"
+      output="screen">
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" output="log">
+      <remap from="map" to="map_before_process" />
+  </node>
+
+  <!-- exploration -->
+  <node name="map_after_process" pkg="map_after_process" type="map_after_process_node" output="screen">
+      <param name="map_sub_topic" value="/map_before_process" />
+      <param name="map_pub_topic" value="/map" />
+      <param name="radius" value="4" />
+  </node>
+  <node name="filter" pkg="filter" type="filter_node" output="screen">
+      <param name="map" value="/map" />
+      <param name="frontier" value="/frontier_marker" />
+      <param name="aim" value="/filtered_points" />
+      <param name="radius" value="2" />
+      <param name="wall_threshold" value="100" />
+  </node>
+  <arg name="eta" value="1.0"/>
+  <arg name="Geta" value="15.0"/>
+  <node name="assigner" pkg="filter" type="assigner_with_submap.py"  output="screen">
+      <param name="map_topic" value="/map"/>
+      <param name="global_frame" value="map"/>
+      <param name="info_radius" value="1"/>
+      <param name="info_multiplier" value="1.0"/> 
+      <param name="hysteresis_radius" value="0.5"/> 
+      <param name="hysteresis_gain" value="2.0"/>
+      <param name="frontiers_topic" value="/filtered_points"/> 
+      <param name="n_robots" value="1"/>
+      <param name="namespace_init_count" value="1"/>
+      <param name="namespace" value=""/>
+      <param name="delay_after_assignement" value="0.5"/>
+      <param name="rate" value="1"/>
+    </node>
+    <!-- <node name="conv_total" pkg="rrt_exploration" type="convenience_util.py" /> -->
+
+  <!-- Move_base -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen">
+    <param name="footprint_padding" value="0.01" />
+    <param name="controller_frequency" value="5.0" />
+    <param name="controller_patience" value="3.0" />
+    <param name="oscillation_timeout" value="30.0" />
+    <param name="oscillation_distance" value="0.5" />
+    <param name="planner_patience" value="1" />
+    <param name="controller_patience" value="1" />
+    <remap from="cmd_vel" to="mobile_base/commands/velocity"/>
+    <param name="recovery_behavior_enabled" value="false" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/base_local_planner_params.yaml" command="load" />
+    <param name="global_costmap/global_frame" value="/map"/>
+    <param name="global_costmap/robot_base_frame" value="/base_link"/>
+    <param name="global_costmap/laser_scan_sensor/sensor_frame" value="/base_laser_link"/>
+    <param name="global_costmap/laser_scan_sensor/topic" value="/base_scan"/>
+    <param name="local_costmap/global_frame" value="/odom_combine"/>
+    <param name="local_costmap/robot_base_frame" value="/base_link"/>
+    <param name="local_costmap/laser_scan_sensor/sensor_frame" value="/base_laser_link"/>
+    <param name="local_costmap/laser_scan_sensor/topic" value="/base_scan"/>
+    <param name="local_costmap/obstacle_layer/laser_scan_sensor/topic" value="/base_scan"/>
+  </node>
+
+  <!-- tf -->
+  <node pkg="tf" type="static_transform_publisher" name="base2laser"
+      args="0.15 0 0.16 0 0 0 base_footprint laser 500"/>
+  <node pkg="tf" type="static_transform_publisher" name="map2odom"
+      args="0 0 0 0 0 0 base_footprint base_link 500"/>
+
+  <!-- rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/turtlebot_hokuyo.rviz" />
+</launch>
+
+

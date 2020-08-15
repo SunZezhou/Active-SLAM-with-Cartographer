@@ -1,0 +1,92 @@
+<launch>
+
+<!-- Launches Kobuki Gazebo simulation in an empty world -->
+<env name="GAZEBO_RESOURCE_PATH" value="$(find cartographer_ros)/launch/includes/meshes"/>
+<!-- start Gazebo with an empty world -->
+<include file="$(find gazebo_ros)/launch/empty_world.launch">
+  <arg name="use_sim_time" value="true"/>
+  <arg name="debug" value="false"/>
+  <arg name="world_name" value="$(find cartographer_ros)/launch/includes/worlds/house.world"/>
+</include>
+
+<include file="$(find cartographer_ros)/launch/includes/robot.launch.xml">
+    <arg name="robot_name" value=""/>
+    <arg name="init_pose" value="-x 0.0 -y 0.0 -z 0.0"/>
+</include>
+
+  <!--Cartogrtapher frontier detection -->
+    <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename carto_gazebo.lua"
+      output="screen">
+      <remap from="scan" to="base_scan" />
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" output="log">
+      <remap from="map" to="map_before_process" />
+  </node>
+
+  <!-- exploration -->
+  <node name="map_after_process" pkg="map_after_process" type="map_after_process_node" output="screen">
+      <param name="map_sub_topic" value="/map_before_process" />
+      <param name="map_pub_topic" value="/map" />
+      <param name="radius" value="4" />
+  </node>
+  <node name="filter" pkg="filter" type="filter_node" output="screen">
+      <param name="map" value="/map" />
+      <param name="frontier" value="/frontier_marker" />
+      <param name="aim" value="/filtered_points" />
+      <param name="radius" value="2" />
+      <param name="wall_threshold" value="100" />
+  </node>
+  <arg name="eta" value="1.0"/>
+  <arg name="Geta" value="15.0"/>
+  <node name="assigner" pkg="filter" type="assigner_with_submap.py"  output="screen">
+      <param name="map_topic" value="/map"/>
+      <param name="global_frame" value="map"/>
+      <param name="info_radius" value="1"/>
+      <param name="info_multiplier" value="1.0"/> 
+      <param name="hysteresis_radius" value="0.5"/> 
+      <param name="hysteresis_gain" value="2.0"/>
+      <param name="frontiers_topic" value="/filtered_points"/> 
+      <param name="n_robots" value="1"/>
+      <param name="namespace_init_count" value="1"/>
+      <param name="namespace" value=""/>
+      <param name="delay_after_assignement" value="0.5"/>
+      <param name="rate" value="1"/>
+    </node>
+
+  <!-- Move_base -->
+  <node pkg="move_base" type="move_base" respawn="false" name="move_base_node" output="screen">
+    <param name="footprint_padding" value="0.01" />
+    <param name="controller_frequency" value="5.0" />
+    <param name="controller_patience" value="3.0" />
+    <param name="oscillation_timeout" value="30.0" />
+    <param name="oscillation_distance" value="0.5" />
+    <param name="planner_patience" value="1" />
+    <param name="controller_patience" value="1" />
+    <remap from="cmd_vel" to="mobile_base/commands/velocity"/>
+    <param name="recovery_behavior_enabled" value="false" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="global_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/costmap_common_params.yaml" command="load" ns="local_costmap" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/local_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/global_costmap_params.yaml" command="load" />
+    <rosparam file="$(find cartographer_ros)/configuration_files/base_local_planner_params.yaml" command="load" />
+    <param name="global_costmap/global_frame" value="/map"/>
+    <param name="global_costmap/robot_base_frame" value="/base_link"/>
+    <param name="global_costmap/laser_scan_sensor/sensor_frame" value="/base_laser_link"/>
+    <param name="global_costmap/laser_scan_sensor/topic" value="/base_scan"/>
+    <param name="local_costmap/global_frame" value="/odom_combine"/>
+    <param name="local_costmap/robot_base_frame" value="/base_link"/>
+    <param name="local_costmap/laser_scan_sensor/sensor_frame" value="/base_laser_link"/>
+    <param name="local_costmap/laser_scan_sensor/topic" value="/base_scan"/>
+    <param name="local_costmap/obstacle_layer/laser_scan_sensor/topic" value="/base_scan"/>
+  </node>
+
+  <!-- rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/turtlebot_hokuyo.rviz" />
+
+</launch>

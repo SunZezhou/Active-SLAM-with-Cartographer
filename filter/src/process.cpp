@@ -21,9 +21,13 @@ const std::vector<cv::Point2i> BFSList = {{-1, -1}, {-1, 0}, {-1, 1}, {0, -1}, {
 
 FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, const tf2_ros::Buffer &tfBuffer, const std::string &base_frame)
 {
+    // std::vector<geometry_msgs::Point> raw_point;
+    // std::vector<geometry_msgs::Point> filtered;
     FrontierArrayMap new_frontiers;
     std::vector<Point> points;
     std::vector<std::pair<SubmapId, size_t>> pointIndex;
+    // std::lock_guard<std::mutex> guard_frontier(frontierMutex);
+    // std::lock_guard<std::mutex> guard_pose(poseMutex);
     points.reserve(frontiers.size());
     pointIndex.reserve(frontiers.size());
     for (const auto &sub : frontiers)
@@ -33,11 +37,15 @@ FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, cons
             points.push_back({(float)sub.second[p_i][0], (float)sub.second[p_i][1]});
             pointIndex.push_back({sub.first, p_i});
         }
-        new_frontiers[sub.first] = {};
     }
     if (points.size() == 0)
         return {};
+    // std::transform(frontiers.begin(), frontiers.end(), std::back_inserter(points), [&](const std::array<double, 3> &p) {
+    //     return Point{(float)p[0], (float)p[1]};
+    // });
+    // ros::Time t0 = ros::Time::now();
     std::vector<Cluster> clusters = meanShift(points, 0.075);
+    // ros::Time t1 = ros::Time::now();
     do
     {
         std::lock_guard<std::mutex> guard(globalMap.mtx);
@@ -45,6 +53,7 @@ FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, cons
             break;
         cv::Mat1b mask = cv::Mat1b::zeros(globalMap.wall.size());
         cv::Rect maskArea = cv::Rect2i{{0, 0}, mask.size()};
+        // cv::Rect totalArea{0, 0, 0, 0};
         auto translation = tfBuffer.lookupTransform(base_frame, "map", ros::Time(0)).transform.translation;
         cv::Point2i basePoint = (cv::Point2d{translation.x, translation.y} - globalMap.base) / globalMap.resolution;
         for (auto &c : clusters)
@@ -73,6 +82,9 @@ FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, cons
                     mask.at<uint8_t>(point) = PixelType::PixelType_Pixel;
                 }
                 cv::Rect2i area = cv::Rect2i{cv::Point2i{minx, miny}, cv::Point2i{maxx + 1, maxy + 1}} & maskArea;
+                // if (totalArea.area() == 0)
+                //     totalArea = area;
+                // totalArea &= area;
                 while (pixelSet.size())
                 { //sub-cluster
                     std::tuple<cv::Point2i, int, double> vPoint{basePoint, -1, std::numeric_limits<double>::max()};
@@ -110,6 +122,7 @@ FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, cons
                     p = p * globalMap.resolution + globalMap.base;
                     result.push_back(std::get<1>(vPoint));
                 }
+                // mask(area) = PixelType_Unknown;
                 return result;
             };
             for (const auto &i : split(c))
@@ -121,5 +134,6 @@ FrontierArrayMap process(const FrontierArrayMap &frontiers, Map &globalMap, cons
             }
         }
     } while (0);
-    return new_frontiers;
+    // ros::Time t2 = ros::Time::now();
+    return new_frontiers;//, (t1 - t0).toNSec(), (t2 - t1).toNSec()};
 }

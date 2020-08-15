@@ -93,7 +93,6 @@ int main(int argc, char** argv) {
 
   ::ros::init(argc, argv, "cartographer_node");
   ::ros::start();
-  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
   cartographer_ros::ScopedRosLogSink ros_log_sink;
   cartographer_ros::Run();

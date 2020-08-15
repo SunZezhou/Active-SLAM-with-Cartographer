@@ -131,7 +131,7 @@ bool DrawableSubmap::MaybeFetchTexture(ros::ServiceClient* const client) {
           std::chrono::system_clock::now().time_since_epoch());
   const bool recently_queried =
       last_query_timestamp_ + kMinQueryDelayInMs > now;
-  if (/*!newer_version_available || */recently_queried || query_in_progress_) {
+  if (!newer_version_available || recently_queried || query_in_progress_) {
     return false;
   }
   query_in_progress_ = true;

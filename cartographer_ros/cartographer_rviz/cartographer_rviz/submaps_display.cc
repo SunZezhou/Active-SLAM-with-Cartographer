@@ -217,8 +217,8 @@ void SubmapsDisplay::update(const float wall_dt, const float ros_dt) {
       }
     }
     for (auto it = trajectory_by_id.second->submaps.rbegin();
-         it != trajectory_by_id.second->submaps.rend()/* &&
-         num_ongoing_requests < kMaxOnGoingRequestsPerTrajectory*/;
+         it != trajectory_by_id.second->submaps.rend() &&
+         num_ongoing_requests < kMaxOnGoingRequestsPerTrajectory;
          ++it) {
       if (it->second->MaybeFetchTexture(&client_)) {
         ++num_ongoing_requests;

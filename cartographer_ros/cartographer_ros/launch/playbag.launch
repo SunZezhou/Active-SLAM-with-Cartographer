@@ -1,0 +1,27 @@
+<launch>
+  
+  <param name="/use_sim_time" value="true" />
+
+  <!--Cartogrtapher frontier detection -->
+    <node name="cartographer_node" pkg="cartographer_ros"
+      type="cartographer_node" args="
+          -configuration_directory $(find cartographer_ros)/configuration_files
+          -configuration_basename playbag.lua"
+      output="screen">
+  </node>
+
+  <node name="cartographer_occupancy_grid_node" pkg="cartographer_ros"
+      type="cartographer_occupancy_grid_node" args="-resolution 0.05" output="log">
+  </node>
+
+    <!-- tf -->
+  <node pkg="tf" type="static_transform_publisher" name="base2laser"
+      args="0.15 0 0.16 0 0 0 /base_link /laser 500"/>
+
+  <!-- rviz -->
+  <node name="rviz" pkg="rviz" type="rviz" required="true"
+      args="-d $(find cartographer_ros)/configuration_files/turtlebot_hokuyo.rviz" />
+  <node name="playbag" pkg="rosbag" type="play"
+      args="--clock $(arg bag_filename)" />
+</launch>
+

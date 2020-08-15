@@ -5,17 +5,12 @@
 //#pragma GCC push_options
 //#pragma GCC optimize ("O0")
 
-// #define COLORFUL
-// #define TYPES_4
-// #define COUNT_DATA_LOG
-
-// #define BFS_LOOPY_SEARCH
+//#define COLORFUL
+//#define BFS_LOOPY_SEARCH
 
 #ifndef BFS_LOOPY_SEARCH
 #define BFS_DIRECTLY_SEARCH
 #endif
-
-#define INFLATE_MAP
 
 #define DEFAULT_COLOR {1.0, 1.0, 1.0, 0.1}
 #define OPT_COLOR {1.0, 0.0, 0.0, 1.0}
@@ -25,12 +20,13 @@
 #include <cartographer/mapping/2d/map_limits.h>
 #include <cartographer_ros/frontier_detection.h>
 #include <cartographer_ros/msg_conversion.h>
+#include <queue>
 
 int total_submap_updates = 0;
 int optimization_events = 0;
 int skipped_updates = 0;
 
-std::vector<std::array<uint8_t,3>> colormap = {{{255, 0, 0}}};/*{
+std::vector<std::array<uint8_t,3>> colormap = {
   {{0, 0, 255}},
   {{0, 96, 255}},
   {{0, 192, 255}},
@@ -47,9 +43,9 @@ std::vector<std::array<uint8_t,3>> colormap = {{{255, 0, 0}}};/*{
   {{255, 0, 228}},
   {{186, 0, 255}},
   {{90, 0, 255}}
-};*/
+};
 
-const int core_radius = 8; // for inflate
+const int core_radius = 5; // for inflate
 
 std::vector<std::pair<int, int>> inflateIt;
 
@@ -68,22 +64,6 @@ Detector::Detector(cartographer::mapping::PoseGraph* const pose_graph)
       inflateIt.push_back({r, c});
     }
   }
-#ifdef COUNT_DATA_LOG
-  ROS_ERROR_STREAM("count-log");
-#endif
-#ifdef TYPES_4
-  ROS_ERROR_STREAM("type-4");
-#endif
-#ifdef BFS_LOOPY_SEARCH
-  ROS_ERROR_STREAM("bfs");
-#endif
-#ifndef BFS_LOOPY_SEARCH
-#ifdef BFS_DIRECTLY_SEARCH
-  ROS_ERROR_STREAM("direct");
-#else
-  ROS_ERROR_STREAM("naive");
-#endif
-#endif
 }
 
 void Detector::NotifyEnd() {
@@ -107,9 +87,6 @@ void Detector::InitPublisher() {
   frontier_publisher_ =
       ros::NodeHandle().advertise<visualization_msgs::MarkerArray>(
           "frontier_marker", 3, true);
-#ifdef FRONTIER_COLORFUL
-  frontier_colorful = ros::NodeHandle().advertise<visualization_msgs::Marker>("frontier_colorful", 3, true);
-#endif
   publisher_initialized_ = true;
 }
 
@@ -136,7 +113,7 @@ void Detector::PublishAllSubmaps() {
     rt_.query(bgi::intersects(bounding_box.last_global_box),
               std::back_inserter(intersecting_submaps));
     for(const Value& v : intersecting_submaps) {
-      if(update_ids.find(v.second) != update_ids.end())
+      if(update_ids.find(v.second) == update_ids.end())
         continue;
       if(!submaps_(v.second).checkNeedUpdate()) {
         update_ids.insert(v.second);
@@ -173,125 +150,11 @@ void Detector::PublishAllSubmaps() {
     opt_submap_color_[id] = OPT_COLOR;
   }
 #endif
-
-#ifdef COUNT_DATA_LOG
-  size_t check_count = 0;
-  size_t frontier_count = 0;
-  size_t total_count = 0;
-#endif
-  auto t = ros::Time::now();
   for (const auto& submap_i : update_ids) { // Algo3.L5
-    size_t once_total_count = 0;
     frontier_markers.markers.push_back(
         CreateMarkerForSubmap(submap_i, nullptr /* updated_submap_ids */,
-                              true /* check_against_active */, &once_total_count)); // Algo3.L8
-#ifdef COUNT_DATA_LOG
-    check_count += once_total_count;
-#endif
+                              true /* check_against_active */)); // Algo3.L8
   }
-  double delta_t = (ros::Time::now() - t).toSec();
-#ifdef FRONTIER_COLORFUL
-  visualization_msgs::Marker frontier_colorful_marker;
-  frontier_colorful_marker.header.frame_id = "map";
-  frontier_colorful_marker.pose.orientation.w = 1.0;
-  frontier_colorful_marker.type = visualization_msgs::Marker::POINTS;
-  frontier_colorful_marker.scale.x = 0.075;
-  frontier_colorful_marker.scale.y = 0.075;
-  frontier_colorful_marker.color.r = 1.0;
-  frontier_colorful_marker.color.a = 1.0;
-  frontier_colorful_marker.ns = "colorful";
-  for(const auto& m : frontier_markers.markers) {
-    frontier_colorful_marker.points.insert(frontier_colorful_marker.points.end(), m.points.begin(), m.points.end());
-  }
-  frontier_colorful.publish(frontier_colorful_marker);
-#endif
-#ifdef COUNT_DATA_LOG
-  for(const auto& submap_i : submap_frontier_points_) {
-    total_count += submap_i.second.second.size();
-    for(const auto& hint : submap_i.second.second) {
-      if(hint == cartographer::mapping::SubmapId{-1, -1})
-        ++frontier_count;
-    }
-  }
-  ROS_INFO_STREAM(", " << delta_t << ", " << total_count << ", " << frontier_count << "," << check_count << ";");
-#endif
-
-#ifdef TYPES_4
-  size_t TP = 0, FP = 0, TN = 0, FN = 0;
-  for(const auto& submap_i : submap_frontier_points_) {
-    const Submap& s_i(submaps_(submap_i.first));
-    const auto& submap_frontier_points = submap_i.second;
-    const auto& bounding_box = bounding_boxes_.at(submap_i.first);
-    std::vector<Value> intersecting_submaps;
-    intersecting_submaps.reserve(32);
-    rt_.query(bgi::intersects(bounding_box.last_global_box),
-              std::back_inserter(intersecting_submaps));
-    Eigen::Matrix3Xd submap_frontier_points_global =
-        (s_i.to_global_position * submap_frontier_points.first); // transform to global g
-    for (int i = 0; i < submap_frontier_points_global.cols(); i++) {
-      const auto global_position = submap_frontier_points_global.col(i);
-      bool ok = true;
-      const auto& submap_hint = submap_frontier_points.second.at(i);
-      if (submap_hint != cartographer::mapping::SubmapId{-1, -1}) { // first test hint
-        Submap* s_j = submaps_.IfExists(submap_hint);
-        if (s_j != nullptr) {
-          if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++TN;
-            ok = false;
-          }
-        }
-      }
-      if (ok) { // then test active submaps
-        for (const auto& active_submap : active_submaps_) {
-          const cartographer::mapping::SubmapId& id_j = active_submap;
-          if (id_j == s_i.id ||
-              (id_j.trajectory_id == s_i.id.trajectory_id &&
-               (abs(id_j.submap_index - s_i.id.submap_index) <= 2)))
-            continue;
-          if (!bg::intersects(
-                  bounding_box.last_global_box,
-                  bounding_boxes_.at(active_submap).last_global_box)) {
-            continue;
-          }
-          Submap* s_j = submaps_.IfExists(id_j);
-          if (s_j == nullptr) {
-            continue;
-          }
-          if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++FN;
-            ok = false;
-            break;
-          }
-        }
-      }
-      if (ok) { // finally test all intersecting submaps
-        for (const auto& intersecting_submap : intersecting_submaps) {
-          const cartographer::mapping::SubmapId& id_j =
-              intersecting_submap.second;
-          if (id_j == s_i.id ||
-              (id_j.trajectory_id == s_i.id.trajectory_id &&
-               (abs(id_j.submap_index - s_i.id.submap_index) <= 2))) {
-            continue;
-          }
-          Submap* s_j = submaps_.IfExists(id_j);
-          if (s_j == nullptr) {
-            continue;
-          }
-          if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++FN;
-            ok = false;
-            break;
-          }
-        }
-      }
-      if (ok) {
-        if(submap_hint != cartographer::mapping::SubmapId{-1, -1}) ++FP;
-        else ++TP;
-      }
-    }
-  }
-  ROS_INFO_STREAM(", " << TP << ", " << FP << ", " << TN << ", " << FN);
-#endif
 
   frontier_publisher_.publish(frontier_markers);
   colorIndex++;
@@ -306,6 +169,7 @@ void Detector::PublishSubmaps(
 
   // std::set<cartographer::mapping::SubmapId> update_submaps = update_submaps_;
   for (const auto& id_i : submap_ids) {
+    // LOG(ERROR) << "publishing submap " << id_i.submap_index;
     frontier_markers.markers.push_back(
         CreateMarkerForSubmap(id_i, nullptr /* updated_submap_ids */,
                               true /* check_against_active */)); // Algo1.L10
@@ -315,6 +179,7 @@ void Detector::PublishSubmaps(
   }
 
   for (const auto& id_additional : additional_submaps) {
+    // LOG(ERROR) << "publishing submap " << id_i.submap_index;
     frontier_markers.markers.push_back(CreateMarkerForSubmap(
         id_additional, &submap_ids /* updated_submap_ids */,
         true /* check_against_active */)); // Algo3.L13-15
@@ -352,9 +217,7 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
     const cartographer::mapping::SubmapId& id_i,
     const std::vector<cartographer::mapping::SubmapId>* const
         updated_submap_ids,
-    const bool check_against_active,
-    size_t* all_count,
-    size_t* delta_count) {
+    const bool check_against_active) {
   Submap& s_i(submaps_(id_i));
 
   s_i.frontier_marker.points.clear();
@@ -362,10 +225,6 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
   std::vector<double> updated_frontier_marker_points_global;
 
   if (updated_submap_ids == nullptr) {
-    // delta_count vars
-    size_t old_hint_count = 0;
-    size_t new_fail_count = 0;
-    size_t hint_fail_again = 0;
     // When recomputing all submaps, or when computing only updated submaps.
     auto& submap_frontier_points = submap_frontier_points_.at(s_i.id);
     auto& bounding_box = bounding_boxes_.at(s_i.id);
@@ -387,15 +246,12 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
       auto& submap_hint = submap_frontier_points.second.at(i);
 
       if (submap_hint != cartographer::mapping::SubmapId{-1, -1}) { // first test hint
-        ++old_hint_count;
         Submap* s_j = submaps_.IfExists(submap_hint);
         if (s_j == nullptr) {
           submap_hint = {-1, -1};
         } else {
-          if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++hint_fail_again;
+          if (s_j->is_known(s_j->to_local_submap_position * global_position))
             ok = false;
-          }
         }
         if (ok) submap_hint = {-1, -1};
       }
@@ -418,7 +274,6 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
             continue;
           }
           if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++new_fail_count;
             ok = false;
             submap_hint = s_j->id;
             break;
@@ -444,7 +299,6 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
           }
 
           if (s_j->is_known(s_j->to_local_submap_position * global_position)) {
-            ++new_fail_count;
             ok = false;
             submap_hint = id_j;
             break;
@@ -464,8 +318,6 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
         // submap_hint = {-1, -1};
       }
     }
-    if(all_count != nullptr) *all_count = submap_frontier_points_global.cols();
-    if(delta_count != nullptr) *delta_count = old_hint_count + new_fail_count - hint_fail_again;
   } else {
     // Computing the intersecting submaps. Check if frontier points were
     // covered by an active submap update.
@@ -521,9 +373,9 @@ visualization_msgs::Marker& Detector::CreateMarkerForSubmap(
       updated_frontier_marker_points_global.data(), 2,
       updated_frontier_marker_points_global.size() / 2);
 
-  s_i.frontier_marker.color.r = colormap[colorIndex % colormap.size()][0] / 255.0;
-  s_i.frontier_marker.color.g = colormap[colorIndex % colormap.size()][1] / 255.0;
-  s_i.frontier_marker.color.b = colormap[colorIndex % colormap.size()][2] / 255.0;
+  //s_i.frontier_marker.color.r = colormap[colorIndex % colormap.size()][0] / 255.0;
+  //s_i.frontier_marker.color.g = colormap[colorIndex % colormap.size()][1] / 255.0;
+  //s_i.frontier_marker.color.b = colormap[colorIndex % colormap.size()][2] / 255.0;
   return s_i.frontier_marker;
 }
 
@@ -567,7 +419,7 @@ void Detector::HandleSubmapUpdates(
   for (int i = 0; i < static_cast<int>(submap_ids.size()); i++) {
     (*submap_copies_ptr)[i] = std::make_pair(
         submap_data[i],
-        //submap_data[i].submap->insertion_finished() ? nullptr :
+        submap_data[i].submap->insertion_finished() ? nullptr :
         absl::make_unique<cartographer::mapping::ProbabilityGrid>(
             *static_cast<const cartographer::mapping::ProbabilityGrid*>(
                 static_cast<const cartographer::mapping::Submap2D*>(
@@ -590,8 +442,8 @@ void Detector::HandleSubmapUpdates(
     }
 
     for (const auto& id_i : submap_ids) { // Algo1.L1
-      Submap& s_i(submaps_(id_i));
-      CHECK(s_i.is_copy && !s_i.finished || /*!s_i.is_copy && */s_i.finished);
+      const Submap& s_i(submaps_(id_i));
+      CHECK(s_i.is_copy && !s_i.finished || !s_i.is_copy && s_i.finished);
 
       int sum = 0;
       for (auto& cost : s_i.grid().correspondence_cost_cells()) {
@@ -635,24 +487,9 @@ void Detector::HandleSubmapUpdates(
 
       DynamicArray raw_wall_cells(1 - ((correspondence_costs > 0) * (correspondence_costs <= kOccupiedProbabilityValue)).cast<uint16_t>());
       DynamicArray wall_cells = DynamicArray::Ones(x_dim, y_dim);
-#ifdef INFLATE_MAP
       for(const auto& it : inflateIt) {
         wall_cells *= raw_wall_cells.block(core_radius + it.first, core_radius + it.second, x_dim, y_dim);
       }
-#endif
-
-      // s_i.set_nowall(DynamicArray::Ones(x_dim, y_dim));//(wall_cells);
-#ifdef INFLATE_MAP
-      auto ptr = s_i.grid_ptr();
-      if(ptr != nullptr && !s_i.walled) {
-        s_i.walled = true;
-        ROS_WARN_STREAM("set wall" << id_i);
-        Eigen::Map<DynamicArray> costs(
-          const_cast<uint16_t*>(ptr->correspondence_cost_cells().data()), full_x_dim,
-          full_y_dim);
-        costs.block(offset.x(), offset.y(), x_dim, y_dim) = costs.block(offset.x(), offset.y(), x_dim, y_dim) * wall_cells + (1 - wall_cells);
-      }
-#endif
 
       DynamicArray free_cells(
           (correspondence_costs >= kFreeProbabilityValue).cast<uint16_t>());

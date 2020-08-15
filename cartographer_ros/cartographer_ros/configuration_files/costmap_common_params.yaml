@@ -1,0 +1,48 @@
+footprint: [[-0.127, -0.127], [-0.18, 0.0], [-0.127, 0.127], [0.0, 0.18], [0.127, 0.127], [0.18, 0.0], [0.127, -0.127], [0.0, -0.18]]
+#footprint: [[-0.283, -0.283], [-0.283, 0.283],[0.283, 0.283], [0.283, -0.283]]
+#robot_radius: 0.314
+
+
+obstacle_layer:
+  enabled: true
+  max_obstacle_height: 1.2
+  min_obstacle_height: 0.0
+  obstacle_range: 3.0
+  raytrace_range: 3.0
+  inflation_radius: 0
+  combination_method: 1
+  track_unknown_space: true
+ 
+  origin_z: 0.0
+  z_resolution: 0.1
+  z_voxels: 10
+  unknown_threshold: 15
+  mark_threshold: 0
+  publish_voxel_map: true
+  footprint_clearing_enabled: true
+  observation_persistence: 0.0
+#expected_update_rate: 0.2
+
+  observation_sources: scan bump
+  scan: {sensor_frame: laser, data_type: LaserScan, topic: /scan, marking: true, clearing: true, max_obstacle_height: 20.0, min_obstacle_height: 0.0}
+  bump: {data_type: PointCloud2, topic: mobile_base/sensors/bumper_pointcloud, marking: true, clearing: true, min_obstacle_height: 0.01, max_obstacle_height: 0.10}
+    
+inflation_layer:
+  enabled:              true
+  cost_scaling_factor:  10.0  # exponential rate at which the obstacle cost drops off (default: 10)
+  inflation_radius:     0 # max. distance from an obstacle at which costs are incurred for planning paths.
+
+static_layer:
+  enabled:              true
+  map_topic:            "/map"
+
+#virtualWall_layer:
+#  enabled:              true
+#  topic:  "/virtualWall_cloudPoint"
+#  map_topic:            "/map"
+
+
+#Configuration for the sensors that the costmap will use to update a map
+
+
+

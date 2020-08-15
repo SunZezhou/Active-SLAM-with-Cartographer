@@ -21,10 +21,6 @@
 #include <boost/geometry/geometries/point.hpp>
 #include <boost/geometry/index/rtree.hpp>
 
-// #define FRONTIER_COLORFUL
-
-extern std::vector<std::pair<int, int>> inflateIt;
-
 namespace frontier {
 
 // const double kFreeProbability = 0.56;
@@ -32,8 +28,11 @@ namespace frontier {
 
 // cartographer::mapping::ProbabilityToValue(kFreeProbability) 18841
 // cartographer::mapping::ProbabilityToValue(kOccupiedProbability) 16384
-constexpr uint16_t kFreeProbabilityValue = 18841;
-constexpr uint16_t kOccupiedProbabilityValue = 16384;
+// constexpr uint16_t kFreeProbabilityValue = 18841;           // dashgo
+// constexpr uint16_t kOccupiedProbabilityValue = 16384;       // dashgo
+constexpr uint16_t kFreeProbabilityValue = 17000;              // turtlebot
+constexpr uint16_t kOccupiedProbabilityValue = 16500;          // turtlebot
+
 
 namespace bg = boost::geometry;
 namespace bgi = bg::index;
@@ -162,9 +161,6 @@ class Detector {
 
   // cartographer_ros_msgs::SubmapList::ConstPtr last_submap_list_;
   ros::Publisher frontier_publisher_;
-#ifdef FRONTIER_COLORFUL
-  ros::Publisher frontier_colorful;
-#endif
   bool publisher_initialized_;
   int last_optimizations_performed_;
 
@@ -182,7 +178,7 @@ class Detector {
                              submap_data.submap.get())
                              ->grid()),
           local_pose_inverse(submap_data.submap->local_pose().inverse()),
-          finished(/*grid_copy ? false : */submap_data.submap->insertion_finished()),
+          finished(grid_copy ? false : submap_data.submap->insertion_finished()),
           needUpdate(false) {
       SetGlobalPose(submap_data.pose);
       frontier_marker.header.frame_id = "map";
@@ -228,25 +224,13 @@ class Detector {
       return grid().limits();
     }
 
-    cartographer::mapping::Grid2D* grid_ptr() const {
-      if(!finished) {
-        return nullptr;
-      } else {
-        return &*grid_copy;
-        //return const_cast<cartographer::mapping::Grid2D*>(&grid_original);
-      }
-    }
-    bool walled = false;
-
-    const double translation_delta = 0.05;
-
     void SetGlobalPose(const cartographer::transform::Rigid3d& global_pose) {
       pose = global_pose;
       to_global_position = rigid3d_to_isometry2d(pose * local_pose_inverse);
       to_local_submap_position = to_global_position.inverse();
 
       Eigen::Vector3d delta = old_pose.translation() - pose.translation();
-      if(std::abs(delta[0]) < translation_delta && std::abs(delta[1]) < translation_delta) return;
+      if(std::abs(delta[0]) < 0.05 && std::abs(delta[1]) < 0.05) return;
       old_pose = pose;
       needUpdate = true;
     }
@@ -358,9 +342,7 @@ class Detector {
   visualization_msgs::Marker& CreateMarkerForSubmap(
       const cartographer::mapping::SubmapId& id_i,
       const std::vector<cartographer::mapping::SubmapId>* updated_submaps,
-      bool check_against_active,
-      size_t* all_count = nullptr,
-      size_t* delta_count = nullptr);
+      bool check_against_active);
 
   Box CalculateBoundingBox(const Submap& submap) {
     auto& bounding_box_info = bounding_boxes_[submap.id];
