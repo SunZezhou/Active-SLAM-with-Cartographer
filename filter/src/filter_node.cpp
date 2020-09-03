@@ -6,7 +6,7 @@
 #include <nav_msgs/OccupancyGrid.h>
 // #include <cartographer_ros_msgs/SubmapList.h>
 // #include <cartographer_ros_msgs/Frontier.h>
-#include <rrt_exploration/PointArray.h>
+#include <filter/PointArray.h>
 #include <geometry_msgs/Point.h>
 #include <visualization_msgs/Marker.h>
 #include <opencv2/opencv.hpp>
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     // StructElem = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(2 * tolerant_radius + 1, 2 * tolerant_radius + 1), cv::Point(tolerant_radius, tolerant_radius));
     ros::Subscriber mapSub = n.subscribe(mapTopic, 1, mapCallback);
     ros::Subscriber frontierSub = n.subscribe(frontierTopic, 1, frontierCallback);
-    ros::Publisher aimPub = n.advertise<rrt_exploration::PointArray>(aimTopic, 1);
+    ros::Publisher aimPub = n.advertise<filter::PointArray>(aimTopic, 1);
     ros::Publisher centroidsPub = n.advertise<visualization_msgs::MarkerArray>(centroidsTopic, 1);
     tf2_ros::Buffer tfBuffer;
     tf2_ros::TransformListener tfListener(tfBuffer);
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
             }
             {
                 visualization_msgs::MarkerArray mArr;
-                rrt_exploration::PointArray pa;
+                filter::PointArray pa;
                 for (auto &r : result)
                 { // TODO:
                     visualization_msgs::Marker m;
