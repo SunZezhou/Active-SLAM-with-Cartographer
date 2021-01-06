@@ -33,7 +33,7 @@
       <visual>
         <geometry>
           <!-- new mesh -->
-          <mesh filename="package:/cartographer_ros/launch/includes/meshes/main_body.dae" />
+          <mesh filename="package://cartographer_ros/launch/includes/meshes/main_body.dae" />
         </geometry>
         <origin xyz="0.001 0 0.05199" rpy="0 0 0"/>
       </visual>
@@ -69,7 +69,7 @@
     <link name="wheel_left_link">
       <visual>
         <geometry>
-          <mesh filename="package:/cartographer_ros/launch/includes/meshes/wheel.dae"/>
+          <mesh filename="package://cartographer_ros/launch/includes/meshes/wheel.dae"/>
         </geometry>
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </visual>
@@ -97,7 +97,7 @@
     <link name="wheel_right_link">
       <visual>
         <geometry>
-          <mesh filename="package:/cartographer_ros/launch/includes/meshes/wheel.dae"/>
+          <mesh filename="package://cartographer_ros/launch/includes/meshes/wheel.dae"/>
         </geometry>
         <origin xyz="0 0 0" rpy="0 0 0"/>
       </visual>
@@ -241,7 +241,7 @@
     <visual>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="package:/cartographer_ros/launch/includes/meshes/hokuyo.dae"/>
+        <mesh filename="package://cartographer_ros/launch/includes/meshes/hokuyo.dae"/>
       </geometry>
     </visual>
 
